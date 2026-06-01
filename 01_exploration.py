@@ -56,53 +56,95 @@ print("Dataset reduit :", df.shape[0], "lignes,", df.shape[1], "colonnes")
 # ATTENTION - DATA LEAKAGE
 # Parmi ces 20 features, certaines decrivent ce qui s'est passe PENDANT
 # ou APRES l'expedition. Elles ne pourront PAS servir de variables
-# predictives dans la regression (on predirait le resultat avec le
-# resultat). On les garde pour la description / le storytelling, mais
-# elles seront exclues du modele :
+# predictives (on predirait le resultat avec le resultat). On les garde
+# pour la description / le storytelling, mais elles sont exclues du modele :
 #   smtmembers, mdeaths, smthired, hdeaths, smtdate, termdate, totdays
 #
 # Features utilisables comme predicteurs (connues avant le depart) :
 #   year, season, peakid, totmembers, tothired, comrte, o2used,
 #   bcdate, camps, rope, host_country, expedition_nation, primary_route
-# (Le modele final devra retenir AU MAXIMUM 10 de ces features.)
 # -------------------------------------------------------------
 
 
-# -------------------------------------------------------------
+# =============================================================
 # 1. PREMIER REGARD
-# A vous. print(df.head()) pour voir a quoi ressemblent les donnees reduites.
-# -------------------------------------------------------------
+# =============================================================
+print("\n===== 1. PREMIER REGARD =====")
+print(df.head())
+print("\nTypes des colonnes :")
+print(df.dtypes)
 
 
-
-# -------------------------------------------------------------
-# 2. TYPES ET VALEURS MANQUANTES
-# A vous. Sur le df REDUIT :
-#   print(df.dtypes)
-#   print(df.isnull().sum().sort_values(ascending=False))
-# Question : quelles colonnes ont beaucoup de NaN ? Comment les traiter
-# au nettoyage (suppression de lignes ? imputation ? suppression colonne) ?
-# -------------------------------------------------------------
-
-
-
-# -------------------------------------------------------------
-# 3. LA CIBLE : success
-# A vous. Verifiez le type, les valeurs, et surtout la repartition :
-#   print(df["success"].value_counts(normalize=True))
-# Question cle : quelle proportion d'expeditions reussissent ?
-# -------------------------------------------------------------
+# =============================================================
+# 2. VALEURS MANQUANTES
+# On regarde le % de NaN par colonne pour decider quoi nettoyer.
+# Constat : les features qu'on va garder pour le modele (o2used, comrte,
+# tothired, totmembers, camps, season, year, peakid) n'ont quasi aucun NaN.
+# Les colonnes tres incompletes (totdays 26%, termdate 26%, bcdate 14%)
+# font partie de celles qu'on ecarte de toute facon.
+# =============================================================
+print("\n===== 2. VALEURS MANQUANTES (%) =====")
+print((df.isnull().mean() * 100).round(1).sort_values(ascending=False))
 
 
+# =============================================================
+# 3. ANALYSE DE LA CIBLE ET DES SIGNAUX
+# C'est ici qu'on recolte les preuves pour justifier le choix des features.
+# =============================================================
+print("\n===== 3. CIBLE : success =====")
+print(df["success"].value_counts(normalize=True).round(3))
+# -> ~55% succes / 45% echec : cible EQUILIBREE, la regression logistique
+#    fonctionnera sans reequilibrage, l'accuracy sera une metrique honnete.
 
-# -------------------------------------------------------------
-# 4. CHOIX DES FEATURES DU MODELE (max 10)
-# A vous. Parmi les features utilisables (voir bloc DATA LEAKAGE ci-dessus),
-# choisissez-en au maximum 10 pour le futur modele. Justifiez chaque choix
-# en commentaire (reutilisable dans le rapport, section "Data description").
-# Exemple :
-#   features_modele = ["year", "season", "peakid", "totmembers", "tothired",
-#                      "o2used", "camps", "host_country"]  # a discuter a deux
-# -------------------------------------------------------------
+print("\n-- Taux de succes par categorie --")
+for c in ["season", "o2used", "comrte"]:
+    print(f"\n[{c}]")
+    print(df.groupby(c)["success"].agg(["mean", "count"]).round(3))
+
+print("\n-- Moyenne des variables numeriques selon le succes --")
+for c in ["year", "totmembers", "tothired", "camps", "rope"]:
+    g = df.groupby("success")[c].mean().round(2)
+    print(f"{c:12s} echec={g[False]:>8}  succes={g[True]:>8}")
+
+print("\n-- Top 8 sommets les plus tentes : taux de succes --")
+top8 = df["peakid"].value_counts().head(8).index
+print(df[df["peakid"].isin(top8)].groupby("peakid")["success"]
+      .agg(["mean", "count"]).round(3).sort_values("count", ascending=False))
 
 
+# =============================================================
+# 4. FEATURES RETENUES POUR LE MODELE (decision argumentee)
+#
+# Cible        : success (booleen, equilibre 55/45)
+# Type modele  : regression logistique
+#
+# Features de base retenues (8, sous la limite de 10) :
+#   o2used      -> signal le plus fort   : 80% succes avec O2 vs 45% sans
+#   comrte      -> route commerciale      : 66% vs 44% (logistique encadree)
+#   tothired    -> nb de sherpas          : moy 4.0 (succes) vs 2.1 (echec)
+#   totmembers  -> taille de l'equipe     : 6.9 vs 5.2
+#   camps       -> nb de camps d'altitude : 2.6 vs 1.8 (RESERVE : peut etre
+#                  mesure pendant la course -> a discuter dans le rapport)
+#   season      -> Printemps 57% / Automne 54% / Hiver 43% / Ete 38%
+#   year        -> progres dans le temps  : 2005 (succes) vs 2001 (echec)
+#   peakid      -> difficulte du sommet   : AmaDablam 71% vs Baruntse 38%
+#                  (sera transforme en one-hot des 8 sommets + "Autre")
+#
+# Features ECARTEES (et pourquoi) :
+#   primary_route     -> 1272 valeurs uniques : inexploitable en logistique
+#   expedition_nation -> 100 valeurs, lien faible, redondant avec le reste
+#   host_country      -> ecrasee par le Nepal (80% des lignes), apport faible
+#   rope              -> aucun signal (166 vs 180), beaucoup de zeros
+#   bcdate            -> date, 14% manquante, redondante avec season/year
+#
+# Handcrafted feature prevue (etape 04) : interaction o2used x season
+#   preuve : au printemps, 82% succes avec O2 vs 36% sans -> l'effet de
+#   l'oxygene depend de la saison (meme logique que Pclass x Age, Cours 4).
+# =============================================================
+features_base = ["o2used", "comrte", "tothired", "totmembers",
+                 "camps", "season", "year", "peakid"]
+
+df_modele = df[features_base + ["success"]].copy()
+print("\n===== 4. JEU DE DONNEES POUR LE MODELE =====")
+print("Features de base :", features_base)
+print("Shape :", df_modele.shape)
