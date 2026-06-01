@@ -172,6 +172,7 @@ from sklearn.metrics import classification_report, confusion_matrix
 ```
 .
 ├── README.md
+├── requirements.txt
 ├── DataBase/
 │   └── exped.csv
 ├── Cours/
@@ -179,15 +180,19 @@ from sklearn.metrics import classification_report, confusion_matrix
 │   ├── Cours2.pdf
 │   ├── Cours3.pdf
 │   └── Cours4.pdf
-├── notebooks/
-│   ├── 01_exploration.ipynb
-│   ├── 02_wrangling.ipynb
-│   ├── 03_visualisation.ipynb
-│   ├── 04_feature_engineering.ipynb
-│   └── 05_regression.ipynb
+├── 01_exploration.py
+├── 02_wrangling.py
+├── 03_visualisation.py
+├── 04_feature_engineering.py
+├── 05_regression.py
+├── figures/
+│   └── (figures exportées via plt.savefig pour le rapport)
 └── report/
     └── (rapport PDF + slides)
 ```
+
+**Installer l'environnement :** `py -m pip install -r requirements.txt`  
+**Lancer un script :** `py 01_exploration.py` (ou le bouton ▶ dans VS Code)
 
 ---
 
