@@ -2,15 +2,15 @@
 # 01 - Exploration des donnees
 #
 # Question metier : peut-on predire si une expedition himalayenne
-# atteint le sommet (success1) a partir d'infos connues AVANT le depart ?
+# atteint le sommet (success) a partir d'infos connues AVANT le depart ?
 #
-# But de ce script : REGARDER les donnees brutes avant de toucher a quoi
-# que ce soit. On ne nettoie pas encore, on ne modelise pas.
+# POINT DE DEPART : on part directement des ~20 features principales
+# retenues par Muhammed Ali Yilmaz dans son notebook Kaggle (autorise :
+# on a le droit d'utiliser la contribution des autres). On documente et
+# on nettoie ces donnees deja reduites, plutot que les 65 colonnes brutes.
 #
-# Inspiration : notebook de Muhammed Ali Yilmaz, "Himalayan Climb Prediction
-# with ML/DL" (https://www.kaggle.com/code/muhammedaliyilmazz/himalayan-climb-prediction-with-ml-dl).
-# On s'en inspire pour le nettoyage et les idees de features, mais on
-# construit notre propre regression logistique.
+# Inspiration : "Himalayan Climb Prediction with ML/DL"
+# https://www.kaggle.com/code/muhammedaliyilmazz/himalayan-climb-prediction-with-ml-dl
 # =============================================================
 
 import pandas as pd
@@ -18,62 +18,91 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Chargement (fourni). Le chemin part de la racine du projet.
-df = pd.read_csv("DataBase/exped.csv", low_memory=False)
-print("Lignes:", df.shape[0], "| Colonnes:", df.shape[1])
+# ----- Chargement du dataset brut (65 colonnes) -----
+df_brut = pd.read_csv("DataBase/exped.csv", low_memory=False)
+print("Dataset brut :", df_brut.shape[0], "lignes,", df_brut.shape[1], "colonnes")
+
+# ----- Reduction aux 20 features de Muhammed + la cible -----
+# Cle = nom reel dans le CSV, valeur = nom lisible (dictionnaire gemini-code.md).
+# Le renommage est une etape de wrangling (Cours 2 : "Relabelling Columns").
+correspondance = {
+    "year": "year",
+    "season": "season",
+    "peakid": "peakid",
+    "totmembers": "totmembers",
+    "smtmembers": "smtmembers",
+    "mdeaths": "mdeaths",
+    "tothired": "tothired",
+    "smthired": "smthired",
+    "hdeaths": "hdeaths",
+    "comrte": "comrte",
+    "o2used": "o2used",
+    "bcdate": "bcdate",
+    "smtdate": "smtdate",
+    "termdate": "termdate",
+    "totdays": "totdays",
+    "camps": "camps",
+    "rope": "rope",
+    "host": "host_country",
+    "nation": "expedition_nation",
+    "route1": "primary_route",
+    "success1": "success",
+}
+
+df = df_brut[list(correspondance.keys())].rename(columns=correspondance)
+print("Dataset reduit :", df.shape[0], "lignes,", df.shape[1], "colonnes")
+
+# -------------------------------------------------------------
+# ATTENTION - DATA LEAKAGE
+# Parmi ces 20 features, certaines decrivent ce qui s'est passe PENDANT
+# ou APRES l'expedition. Elles ne pourront PAS servir de variables
+# predictives dans la regression (on predirait le resultat avec le
+# resultat). On les garde pour la description / le storytelling, mais
+# elles seront exclues du modele :
+#   smtmembers, mdeaths, smthired, hdeaths, smtdate, termdate, totdays
+#
+# Features utilisables comme predicteurs (connues avant le depart) :
+#   year, season, peakid, totmembers, tothired, comrte, o2used,
+#   bcdate, camps, rope, host_country, expedition_nation, primary_route
+# (Le modele final devra retenir AU MAXIMUM 10 de ces features.)
+# -------------------------------------------------------------
 
 
 # -------------------------------------------------------------
 # 1. PREMIER REGARD
-# A vous. Affichez les premieres lignes pour voir a quoi ressemblent
-# les donnees. Utilisez print(df.head()).
-# Question : qu'est-ce qui est lisible (year, season...) et qu'est-ce
-# qui ressemble a un code interne (expid, chksum...) ?
+# A vous. print(df.head()) pour voir a quoi ressemblent les donnees reduites.
 # -------------------------------------------------------------
 
 
 
 # -------------------------------------------------------------
 # 2. TYPES ET VALEURS MANQUANTES
-# A vous. Pour chaque colonne : son type et combien de NaN.
-# Pistes : df.dtypes, df.info(), df.isnull().sum()
-# Pour trier les colonnes les plus vides en premier :
+# A vous. Sur le df REDUIT :
+#   print(df.dtypes)
 #   print(df.isnull().sum().sort_values(ascending=False))
-# Question : quelles colonnes sont quasi vides et donc inutilisables ?
+# Question : quelles colonnes ont beaucoup de NaN ? Comment les traiter
+# au nettoyage (suppression de lignes ? imputation ? suppression colonne) ?
 # -------------------------------------------------------------
 
 
 
 # -------------------------------------------------------------
-# 3. LA CIBLE : success1
-# A vous. C'est ce qu'on veut predire. Verifiez :
-#   - son type        : df["success1"].dtype
-#   - ses valeurs     : df["success1"].unique()
-#   - sa repartition  : df["success1"].value_counts()
-#                       df["success1"].value_counts(normalize=True)  -> en %
+# 3. LA CIBLE : success
+# A vous. Verifiez le type, les valeurs, et surtout la repartition :
+#   print(df["success"].value_counts(normalize=True))
 # Question cle : quelle proportion d'expeditions reussissent ?
-# (si tres desequilibre, ex 90/10, on en tiendra compte a la regression)
 # -------------------------------------------------------------
 
 
 
 # -------------------------------------------------------------
-# 4. SELECTION DES COLONNES (max 10)
-# Etape qui demande le plus de reflexion. Deux regles :
-#
-# Regle 1 - PAS DE DATA LEAKAGE : on ne garde QUE des infos connues
-# AVANT le depart. Interdit (post-expedition) :
-#   smtmembers, smthired, smtdate, smttime, smtdays, mdeaths, hdeaths,
-#   termreason, termnote, termdate, highpoint, success2/3/4, ascent1/2/3/4
-#
-# Regle 2 - PERTINENCE : pour chaque colonne, demandez-vous si un
-# alpiniste experimente penserait qu'elle influence les chances de reussite.
-#
-# A vous. Definissez la liste des ~10 colonnes, puis le sous-tableau :
-#   colonnes = ["year", "season", "peakid", "totmembers", "tothired", "o2used", "camps"]  # a completer
-#   df_select = df[colonnes + ["success1"]]
-#   print(df_select.head())
-# Justifiez chaque choix en commentaire (reutilisable dans le rapport).
+# 4. CHOIX DES FEATURES DU MODELE (max 10)
+# A vous. Parmi les features utilisables (voir bloc DATA LEAKAGE ci-dessus),
+# choisissez-en au maximum 10 pour le futur modele. Justifiez chaque choix
+# en commentaire (reutilisable dans le rapport, section "Data description").
+# Exemple :
+#   features_modele = ["year", "season", "peakid", "totmembers", "tothired",
+#                      "o2used", "camps", "host_country"]  # a discuter a deux
 # -------------------------------------------------------------
 
 
