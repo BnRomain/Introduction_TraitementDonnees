@@ -6,14 +6,13 @@
 
 ---
 
-## Objectif du projet
+## Question métier
 
-Choisir un dataset Kaggle, définir une **question métier** claire, puis mener une analyse complète de la donnée pour y répondre. Le but n'est pas de répondre parfaitement à la question, mais de montrer que l'analyse des données éclaire la réponse.
+> **Peut-on prédire si une expédition himalayenne va atteindre le sommet, à partir des caractéristiques connues avant le départ ?**
 
-Contraintes sur le dataset :
-- Chaque équipe a son propre dataset (pas de doublon entre équipes)
-- Le dataset Titanic est **interdit**
-- Le dataset doit être pertinent pour une régression (linéaire, logistique ou softmax)
+**Dataset :** [Himalayan Expeditions — Kaggle](https://www.kaggle.com/datasets/siddharth0935/himalayan-expeditions)  
+11 000 expéditions, 65 colonnes. Variable cible : `success1` (booléen).  
+**Type de modèle :** régression logistique (classification binaire : succès / échec).
 
 ---
 
@@ -26,7 +25,7 @@ Contraintes sur le dataset :
 | 3 | Mar. 2 juin matin | Visualisation des données + data storytelling |
 | 4 | Mar. 2 juin après-midi | Pipeline de données, feature engineering, intro régression |
 | 5 | Mer. 3 juin matin | Feature engineering + visualisation |
-| 6 | Mer. 3 juin après-midi | Régression linéaire + storytelling |
+| 6 | Mer. 3 juin après-midi | Régression logistique + storytelling |
 | 7 | Jeu. 4 juin matin | Pipeline final + préparation soutenance |
 | 8 | Ven. 5 juin matin | Soutenance orale + rapport |
 
@@ -37,23 +36,23 @@ Contraintes sur le dataset :
 ## Livrables
 
 ### 1. Soutenance orale (5 min + 5 min Q&A)
-Exactement **5 slides**, une par thème, format **data storytelling** (narrative claire et engageante) :
+Exactement **5 slides**, format **data storytelling** :
 
-1. **Business goal** — quel est le dataset ? pourquoi est-il utile ?
-2. **Data description** — combien de features ? quels types ?
-3. **Handcrafted features** — quelles features avez-vous créées et pourquoi ?
-4. **Régression** — quelle régression ? pourquoi ? résultats ?
-5. **Conclusion** — bénéfices de l'analyse, pistes d'amélioration
+1. **Business goal** — présenter le dataset et la question
+2. **Data description** — les features retenues, leur type, les valeurs manquantes
+3. **Handcrafted features** — les features créées et leur justification
+4. **Régression logistique** — résultats, métriques, interprétation
+5. **Conclusion** — ce que l'analyse révèle, pistes d'amélioration
 
 ### 2. Rapport écrit (10 pages max)
 
 | Section | Pages max |
 |---|---|
 | 1. Business goal | 1 |
-| 2. Team management (organisation, planning) | 1 |
-| 3. Data visualisation (figures commentées) | 2 |
-| 4. Handcrafted features (description + justification) | 2 |
-| 5. Régression (choix + résultats + fiabilité) | 2 |
+| 2. Team management | 1 |
+| 3. Data visualisation | 2 |
+| 4. Handcrafted features | 2 |
+| 5. Régression logistique | 2 |
 | 6. Conclusion | 1 |
 | 7. Références | 1 |
 
@@ -61,108 +60,110 @@ Exactement **5 slides**, une par thème, format **data storytelling** (narrative
 
 ## Étapes techniques
 
-### Étape 1 — Choix du dataset et du problème
+### Étape 1 — Sélection des variables (fait)
 
-- Parcourir [kaggle.com/datasets](https://www.kaggle.com/datasets) pour trouver un dataset intéressant
-- Définir une question métier : *"Peut-on prédire X à partir de Y ?"*
-- Vérifier que le dataset est adapté à la régression (variable cible continue, binaire ou multiclasse)
-- S'assurer qu'aucune autre équipe n'a pris ce dataset
+Sur les 65 colonnes, on ne garde que des **variables connues avant le départ** (pas de data leakage).
 
-**Questions à se poser :**
-- Combien de lignes et de colonnes ?
-- Y a-t-il des valeurs manquantes ?
-- Quelle est la variable cible (ce qu'on veut prédire) ?
+**Variables exclues car post-expédition (data leakage) :**
+- `smtmembers`, `smthired`, `smtdate`, `smttime`, `smtdays` — infos post-sommet
+- `mdeaths`, `hdeaths` — décès survenus pendant
+- `termreason`, `termnote`, `termdate` — raison de fin d'expédition
+- `highpoint` — altitude max atteinte (= sommet si succès)
+- `success2/3/4`, `ascent1/2/3/4` — variantes du résultat
+
+**Variables candidates à retenir (max 10) :**
+
+| Variable | Type | Description |
+|---|---|---|
+| `year` | numérique | Année de l'expédition |
+| `season` | catégoriel | Saison (1=hiver, 2=printemps, 3=été, 4=automne) |
+| `peakid` | catégoriel | Identifiant du sommet visé |
+| `totmembers` | numérique | Nombre total de membres |
+| `tothired` | numérique | Nombre de Sherpas/porteurs engagés |
+| `o2used` | booléen | Utilisation d'oxygène prévu |
+| `camps` | numérique | Nombre de camps installés |
+| `comrte` | booléen | Route commerciale (oui/non) |
+| `nohired` | booléen | Expédition sans personnel engagé |
+| `nation` | catégoriel | Nationalité de l'équipe |
+
+La sélection finale se fait après l'exploration (étape 2).
 
 ---
 
-### Étape 2 — Data Wrangling (Cours 2)
+### Étape 2 — Data Wrangling
 
-C'est souvent la partie la plus longue du travail d'un data scientist. Elle inclut :
+C'est la partie la plus longue. Dans l'ordre :
 
-**Sanity checks initiaux :**
-- Ouvrir le fichier et regarder son contenu brut
-- Vérifier les types de colonnes (numérique, texte, date, catégoriel)
-- Repérer les valeurs nulles / manquantes
-- Identifier les doublons
-- Vérifier la cohérence des valeurs (valeurs aberrantes, erreurs de saisie)
+**Sanity checks :**
+- Charger le CSV et afficher les premières lignes (`df.head()`)
+- Vérifier les types (`df.dtypes`)
+- Compter les valeurs manquantes (`df.isnull().sum()`)
+- Chercher les doublons (`df.duplicated().sum()`)
+- Vérifier que `success1` est bien un booléen et regarder l'équilibre des classes
 
 **Nettoyage :**
-- Supprimer ou imputer les valeurs manquantes
-- Renommer les colonnes si nécessaire
-- Supprimer les colonnes inutiles
+- Garder uniquement les colonnes retenues + la cible `success1`
+- Gérer les valeurs manquantes (suppression ou imputation selon la colonne)
+- Encoder les variables catégorielles (`season`, `peakid`, `nation`)
 
-**Transformation des features :**
-- Convertir les unités si besoin
-- Normalisation (imposer un min/max) ou standardisation (moyenne 0, écart-type 1)
-- Encodage des variables catégorielles
+**Transformation :**
+- Standardiser les variables numériques (`totmembers`, `tothired`, `camps`, `year`)
 
-**Bibliothèques principales :** `pandas`, `numpy`
+**Bibliothèques :** `pandas`, `numpy`
 
 ---
 
-### Étape 3 — Visualisation des données (Cours 3)
+### Étape 3 — Visualisation
 
-L'objectif est de produire des **figures claires et honnêtes** qui racontent quelque chose sur vos données.
+Produire des figures qui **racontent quelque chose** sur la difficulté d'atteindre un sommet.
 
-**Règles de base à respecter :**
-- L'axe Y commence toujours à zéro (sauf raison explicite)
-- Titre, axes et légendes toujours présents
-- Ne pas sélectionner seulement les données qui "arrangent" la narrative
-- Une figure = un message clair
+**Idées de figures pertinentes :**
+- Taux de succès par saison (bar chart)
+- Taux de succès par sommet — les 10 plus tentés (bar chart horizontal)
+- Évolution du taux de succès par année (line chart)
+- Distribution de la taille des équipes (histogramme, succès vs échec)
+- Impact de l'utilisation d'oxygène sur le succès (bar chart)
 
-**Types de visualisations à connaître :**
-- Distribution d'une variable : histogramme, boxplot, violin plot
-- Relation entre deux variables continues : scatter plot
-- Variable catégorielle vs continue : bar chart, boxplot groupé
-- Corrélations : heatmap de corrélation
+**Règles :** axe Y à zéro, titre + légendes toujours présents, une figure = un message.
 
-**Bibliothèques principales :** `matplotlib`, `seaborn`
+**Bibliothèques :** `matplotlib`, `seaborn`
 
 ---
 
-### Étape 4 — Feature Engineering (Cours 2 + 4)
+### Étape 4 — Feature Engineering
 
-Créer de nouvelles features à partir des features existantes, grâce à la connaissance du domaine.
+Créer de nouvelles features à partir des variables brutes.
 
-**Techniques vues en cours :**
-- **Binning** : transformer une variable continue en catégories discrètes (ex : âge -> tranche d'âge)
-- **Agrégation** : regrouper des catégories rares sous un label commun (ex : "Rare")
-- **Interaction** : créer une feature produit de deux features (ex : `Pclass * Age`)
-- **Encodage ordinal non-linéaire** : assigner des valeurs non uniformes à des catégories ordonnées
+**Idées à explorer :**
+- `ratio_hired` = `tothired / totmembers` (proportion de l'équipe qui est du personnel engagé)
+- `era` = période historique par binning sur `year` (avant 1970 / 1970-2000 / après 2000)
+- `big_team` = booléen si `totmembers` > seuil (à déterminer visuellement)
+- Encodage ordinal de `season` selon le taux de succès historique par saison
 
-**À chaque feature créée, se demander :**
-- Pourquoi cette feature pourrait aider le modèle ?
-- Est-ce qu'elle crée une dépendance avec la variable cible ?
-- Est-ce qu'on peut la visualiser pour vérifier sa pertinence ?
+Pour chaque feature créée : visualiser sa relation avec `success1` avant de la garder.
 
 ---
 
-### Étape 5 — Modélisation (Cours 4)
+### Étape 5 — Régression logistique
 
-**Quel type de régression choisir ?**
+```python
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report, confusion_matrix
+```
 
-| Type | Variable cible | Exemple |
-|---|---|---|
-| Régression linéaire | Continue (ex : prix, température) | Prédire le prix d'une maison |
-| Régression logistique | Binaire (0 ou 1) | Prédire si un client va partir |
-| Régression softmax | Multiclasse (3+ catégories) | Prédire la classe d'une fleur |
+**Pipeline :**
+1. Séparer X (features) et y (`success1`)
+2. Split train/test (80/20)
+3. Standardiser les features numériques (fit sur train uniquement)
+4. Entraîner `LogisticRegression()`
+5. Évaluer sur le test set : accuracy, precision, recall, matrice de confusion
 
-**Pipeline recommandé :**
-1. Séparer les données en train / test
-2. Standardiser les features numériques (fit sur train, transform sur train + test)
-3. Entraîner le modèle sur le train set
-4. Évaluer sur le test set
-
-**Bibliothèque principale :** `scikit-learn`
-- Régression linéaire : `sklearn.linear_model.LinearRegression`
-- Régression logistique : `sklearn.linear_model.LogisticRegression`
-- Régression softmax : `LogisticRegression(multi_class='multinomial')`
-- Validation : `train_test_split`, métriques selon le type (MSE, accuracy, etc.)
-
-**Validation du modèle :**
-- Les résultats sont-ils cohérents ? (pas de 100% accuracy sur un vrai dataset)
-- Le modèle généralise-t-il ? (comparer performance train vs test)
-- Les features les plus importantes font-elles sens intuitivement ?
+**Questions à se poser sur les résultats :**
+- Le modèle est-il meilleur qu'un classifieur naïf (toujours prédire la classe majoritaire) ?
+- Quels coefficients ont le plus de poids ? Est-ce cohérent intuitivement ?
+- Y a-t-il du sur-apprentissage (performance train >> test) ?
 
 ---
 
@@ -171,12 +172,17 @@ Créer de nouvelles features à partir des features existantes, grâce à la con
 ```
 .
 ├── README.md
-├── data/
-│   └── (dataset brut téléchargé depuis Kaggle)
+├── DataBase/
+│   └── exped.csv
+├── Cours/
+│   ├── Cours1.pdf
+│   ├── Cours2.pdf
+│   ├── Cours3.pdf
+│   └── Cours4.pdf
 ├── notebooks/
-│   ├── 01_exploration.ipynb       # Premiers regards sur les données
-│   ├── 02_wrangling.ipynb         # Nettoyage et transformation
-│   ├── 03_visualisation.ipynb     # Figures et data storytelling
+│   ├── 01_exploration.ipynb
+│   ├── 02_wrangling.ipynb
+│   ├── 03_visualisation.ipynb
 │   ├── 04_feature_engineering.ipynb
 │   └── 05_regression.ipynb
 └── report/
@@ -187,16 +193,17 @@ Créer de nouvelles features à partir des features existantes, grâce à la con
 
 ## Ressources utiles
 
-- [Kaggle Datasets](https://www.kaggle.com/datasets)
+- [Dataset Kaggle — Himalayan Expeditions](https://www.kaggle.com/datasets/siddharth0935/himalayan-expeditions)
+- [Notebooks Kaggle sur ce dataset](https://www.kaggle.com/datasets/siddharth0935/himalayan-expeditions/code) (s'en inspirer, pas copier)
 - [Pandas documentation](https://pandas.pydata.org/docs/)
-- [Scikit-learn Linear Models](https://scikit-learn.org/stable/modules/linear_model.html)
-- [Scikit-learn Feature Selection](https://scikit-learn.org/stable/modules/feature_selection.html)
+- [Scikit-learn — Logistic Regression](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html)
+- [Scikit-learn — Feature Selection](https://scikit-learn.org/stable/modules/feature_selection.html)
 - [Seaborn gallery](https://seaborn.pydata.org/examples/index.html)
 
 ---
 
 ## Notes
 
-- Réutiliser des notebooks Kaggle existants est encouragé, mais les comprendre et les adapter est obligatoire
-- Le format "data storytelling" est exigé : chaque figure doit raconter quelque chose, pas juste exister
+- S'inspirer des notebooks Kaggle existants est encouragé, mais comprendre et adapter le code est obligatoire
+- Format "data storytelling" exigé : chaque figure doit raconter quelque chose, pas juste exister
 - L'URL de ce dépôt Git doit figurer dans le rapport
