@@ -79,6 +79,17 @@ numérotés correspondant aux étapes du pipeline (exploration, wrangling,
 visualisation, feature engineering, régression). Le code et les données sont
 versionnés sur \textbf{GitHub}~: \url{https://github.com/BnRomain/Introduction_TraitementDonnees}.
 
+\paragraph{Ressources et assistance.} Le projet s'appuie sur \textbf{Kaggle},
+à la fois comme source du jeu de données et comme base de travail (le notebook
+de M.~A.~Yilmaz nous a servi de point de départ pour la sélection des
+variables). Nous avons par ailleurs utilisé une \textbf{assistance par
+intelligence artificielle} sur les parties techniques~: aide à l'écriture et
+au débogage du code Python, et exploration de certaines \textbf{corrélations
+entre variables} pour orienter notre analyse. Chaque résultat suggéré de cette
+manière a ensuite été \textbf{vérifié sur les données} et réinterprété par nos
+soins~: l'IA a accéléré la mise en œuvre, mais les décisions (quelles variables
+garder, comment les justifier) restent les nôtres.
+
 \paragraph{Méthode de collaboration.} Nous avons adopté un flux de travail
 git sur une branche unique, avec synchronisation fréquente
 (\texttt{pull -{}-rebase}) avant chaque contribution pour limiter les
@@ -94,23 +105,25 @@ et~02), Loriziano la \textbf{visualisation} et le \textbf{feature engineering}
 \textbf{slides} ont été menés en commun, car ce sont les étapes où la
 discussion à deux apporte le plus.
 
-\paragraph{Planning.} Le projet s'est étalé sur six semaines, en suivant
-l'ordre logique du traitement de données (tableau~\ref{tab:planning}).
+\paragraph{Planning.} Le projet a été mené sur une \textbf{semaine de travail
+intensive}, en suivant l'ordre logique du traitement de données
+(tableau~\ref{tab:planning}). Ce rythme resserré a été rendu possible par une
+répartition claire des tâches et par l'usage d'outils nous permettant
+d'avancer vite sur les parties techniques (voir ci-dessous).
 
 \begin{table}[H]
 \centering
-\caption{Planning du projet.}
+\caption{Planning du projet (une semaine).}
 \label{tab:planning}
 \begin{tabular}{ll}
 \toprule
-Semaine & Étape \\
+Jour & Étape \\
 \midrule
 1 & Choix du dataset, question métier, mise en place du dépôt Git \\
 2 & Exploration et nettoyage des données (\textit{wrangling}) \\
 3 & Visualisation~: recherche de relations entre variables \\
-4 & \textit{Feature engineering}~: création et test des variables \\
-5 & Régression logistique, validation, optimisation \\
-6 & Rédaction du rapport et préparation de la soutenance \\
+4 & \textit{Feature engineering} et régression logistique (validation) \\
+5 & Optimisation, rédaction du rapport et préparation de la soutenance \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -121,6 +134,60 @@ des données, et nous avons accepté de \textbf{rejeter} nos propres
 hypothèses lorsque les données les contredisaient (voir
 section~\ref{sec:features}). Cette honnêteté est, selon nous, le c\oe ur de
 la démarche scientifique.
+
+% =====================================================================
+\section{Préparation des données (\textit{wrangling})}
+\label{sec:wrangling}
+% =====================================================================
+
+Avant toute visualisation ou modélisation, les données brutes doivent être
+\textbf{nettoyées et mises en forme}. Cette étape, souvent invisible dans le
+résultat final, conditionne pourtant tout le reste~: un modèle entraîné sur des
+données mal préparées apprend des artefacts. Nous avons structuré ce travail en
+quatre temps et produit deux fichiers intermédiaires (\texttt{exped\_depart.csv}
+juste après renommage, \texttt{exped\_clean.csv} prêt pour le modèle), afin de
+garder une trace claire de la transformation.
+
+\paragraph{1. Renommage des colonnes.} Le fichier brut compte 65~colonnes aux
+intitulés cryptiques. Conformément au cours (\textit{relabelling columns}), nous
+avons d'abord réduit le jeu à la vingtaine de variables retenues par le notebook
+Kaggle de référence, en leur donnant des noms lisibles (\texttt{host} $\to$
+\texttt{host\_country}, \texttt{success1} $\to$ \texttt{success}, etc.).
+
+\paragraph{2. Nettoyage des lignes.} Nous avons retiré deux catégories de lignes
+problématiques~: les \textbf{2~expéditions} dont la saison est «~Unknown~»
+(catégorie inexploitable) et les \textbf{63~expéditions sans aucun membre}
+(\texttt{totmembers}~$=0$), qui sont des données douteuses et rendraient
+impossible le calcul du ratio de Sherpas (division par zéro). Le jeu passe ainsi
+de \textbf{11~425} à \textbf{11~362~expéditions}, soit une perte de seulement
+0{,}6~\%~: le nettoyage est marginal, signe d'un jeu de données déjà de bonne
+qualité sur les variables qui nous intéressent.
+
+\paragraph{3. Sélection et lutte contre le \textit{data leakage}.} Nous ne
+conservons que les 8~prédicteurs connus \textbf{avant le départ} et la cible.
+Tout le reste est abandonné~: d'une part les variables \textit{post-départ}
+(décès, dates de sommet, durée totale\dots) qui constitueraient une fuite, et
+d'autre part les variables sans signal exploitable (\texttt{primary\_route} et
+ses 1~272~valeurs uniques, \texttt{rope} massivement vide, etc.).
+
+\paragraph{4. Encodage.} Le modèle attend des nombres. Nous avons donc converti
+les booléens (\texttt{o2used}, \texttt{comrte}, \texttt{success}) en 0/1, créé la
+feature \texttt{ratio\_hired} (section~\ref{sec:features}), puis encodé les
+variables catégorielles \texttt{season} et \texttt{peakid} en \textit{one-hot}.
+Pour \texttt{peakid} (416~sommets distincts), nous n'avons gardé que les
+\textbf{8~sommets les plus tentés}, regroupant le reste sous «~Autre~» afin
+d'éviter une explosion du nombre de colonnes. L'option \texttt{drop\_first}
+retire une catégorie de référence (l'AmaDablam pour les sommets, l'automne pour
+les saisons)~: c'est par rapport à elles que s'interpréteront les coefficients du
+modèle (section~\ref{sec:regression}).
+
+\paragraph{Un choix méthodologique~: ne pas standardiser ici.} On aurait pu
+standardiser les variables numériques dès cette étape. Nous ne l'avons
+\textbf{volontairement pas fait}~: la moyenne et l'écart-type doivent être
+calculés sur les seules données d'entraînement, sinon l'information du jeu de
+test «~fuite~» dans les paramètres de prétraitement. La standardisation est donc
+repoussée à l'intérieur du pipeline de modélisation (section~\ref{sec:regression}),
+où elle est recalculée à chaque entraînement.
 
 % =====================================================================
 \section{Visualisation des données}
