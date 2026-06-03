@@ -123,8 +123,11 @@ print(df[df["peakid"].isin(top8)].groupby("peakid")["success"]
 #   comrte      -> route commerciale      : 66% vs 44% (logistique encadree)
 #   tothired    -> nb de sherpas          : moy 4.0 (succes) vs 2.1 (echec)
 #   totmembers  -> taille de l'equipe     : 6.9 vs 5.2
-#   camps       -> nb de camps d'altitude : 2.6 vs 1.8 (RESERVE : peut etre
-#                  mesure pendant la course -> a discuter dans le rapport)
+#   camps       -> nb de camps d'altitude : 2.6 vs 1.8 (RESERVE : DATA LEAKAGE
+#                  confirme. Sur l'Everest le succes saute de 22% (2 camps) a
+#                  71% (3 camps) car l'assaut final part du camp 4 : "camps"
+#                  mesure jusqu'ou on est monte, pas la preparation. A garder
+#                  pour l'instant, on COMPARERA le modele avec/sans en etape 05.)
 #   season      -> Printemps 57% / Automne 54% / Hiver 43% / Ete 38%
 #   year        -> progres dans le temps  : 2005 (succes) vs 2001 (echec)
 #   peakid      -> difficulte du sommet   : AmaDablam 71% vs Baruntse 38%
@@ -137,9 +140,13 @@ print(df[df["peakid"].isin(top8)].groupby("peakid")["success"]
 #   rope              -> aucun signal (166 vs 180), beaucoup de zeros
 #   bcdate            -> date, 14% manquante, redondante avec season/year
 #
-# Handcrafted feature prevue (etape 04) : interaction o2used x season
-#   preuve : au printemps, 82% succes avec O2 vs 36% sans -> l'effet de
-#   l'oxygene depend de la saison (meme logique que Pclass x Age, Cours 4).
+# Handcrafted features (etape 04) - bilan apres tests :
+#   ratio_hired = tothired/totmembers -> GARDEE (49% succes si ratio<0.5,
+#                 64% si ratio 0.5-1 : la proportion de Sherpas compte).
+#   o2used x season                   -> REJETEE : faux signal (confounding).
+#                 L'effet "O2 selon saison" venait du sommet tente (Everest
+#                 au printemps), pas de la saison. Cf preuve en 04.
+#   rope_bool                         -> REJETEE : aucun signal (55% vs 54%).
 # =============================================================
 features_base = ["o2used", "comrte", "tothired", "totmembers",
                  "camps", "season", "year", "peakid"]
