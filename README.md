@@ -204,7 +204,6 @@ from sklearn.metrics import classification_report, confusion_matrix
 - [Scikit-learn — Logistic Regression](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html)
 - [Scikit-learn — Feature Selection](https://scikit-learn.org/stable/modules/feature_selection.html)
 - [Seaborn gallery](https://seaborn.pydata.org/examples/index.html)
-- https://www.overleaf.com/9477487274wnndctzkkstr#bbeb71
 
 ---
 
