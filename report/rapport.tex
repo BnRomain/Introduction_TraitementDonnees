@@ -8,15 +8,11 @@
 \usepackage{booktabs}
 \usepackage{float}
 \usepackage{caption}
-\usepackage{xcolor}
 \usepackage[hidelinks]{hyperref}
 
 % Cherche les figures dans plusieurs emplacements (local report/, ou Overleaf)
 \graphicspath{{../figures/}{figures/}{./}}
 \captionsetup{font=small,labelfont=bf}
-
-% Marqueur pour les passages a personnaliser par l'equipe
-\newcommand{\ajuster}[1]{\textcolor{red}{[\textbf{A AJUSTER} : #1]}}
 
 \title{\vspace{-1.5cm}\textbf{Peut-on prédire le succès d'une expédition himalayenne~?}\\[0.3cm]
 \large Introduction au Traitement des Données --- Projet Kaggle}
@@ -90,10 +86,34 @@ conflits. Chaque décision importante (choix d'une variable, rejet d'une
 feature) est documentée directement en commentaire dans le code, afin que les
 deux membres partagent le même raisonnement.
 
-\paragraph{Répartition du travail.}
-\ajuster{décrire qui a fait quoi, par exemple~: Romain sur l'exploration et
-le wrangling, Loriziano sur la visualisation et le feature engineering,
-régression et rapport en commun. Adapter à la réalité.}
+\paragraph{Répartition du travail.} Nous avons réparti les étapes du pipeline
+tout en relisant systématiquement le travail de l'autre~: Romain a pris en
+charge l'\textbf{exploration} et le \textbf{nettoyage} des données (scripts~01
+et~02), Loriziano la \textbf{visualisation} et le \textbf{feature engineering}
+(scripts~03 et~04). La \textbf{régression}, le \textbf{rapport} et les
+\textbf{slides} ont été menés en commun, car ce sont les étapes où la
+discussion à deux apporte le plus.
+
+\paragraph{Planning.} Le projet s'est étalé sur six semaines, en suivant
+l'ordre logique du traitement de données (tableau~\ref{tab:planning}).
+
+\begin{table}[H]
+\centering
+\caption{Planning du projet.}
+\label{tab:planning}
+\begin{tabular}{ll}
+\toprule
+Semaine & Étape \\
+\midrule
+1 & Choix du dataset, question métier, mise en place du dépôt Git \\
+2 & Exploration et nettoyage des données (\textit{wrangling}) \\
+3 & Visualisation~: recherche de relations entre variables \\
+4 & \textit{Feature engineering}~: création et test des variables \\
+5 & Régression logistique, validation, optimisation \\
+6 & Rédaction du rapport et préparation de la soutenance \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \paragraph{Démarche.} Notre fil conducteur a été de ne jamais retenir une
 variable «~au feeling~». Chaque choix s'appuie sur une preuve chiffrée tirée
@@ -179,7 +199,9 @@ nombre brut de Sherpas qui compte mais leur proportion. Nous définissons
 \textbf{Test.} Le taux de succès croît de façon nette avec le ratio
 (figure~\ref{fig:ratio})~: \textbf{49~\%} pour un ratio inférieur à 0{,}5,
 contre \textbf{64~\%} pour un ratio entre 0{,}5 et 1. \textbf{Décision~:
-gardée.}
+gardée} (avec une réserve révélée plus tard~: en présence des autres
+prédicteurs, son apport devient marginal, voir
+section~\ref{sec:regression}).
 
 \begin{figure}[H]
 \centering
@@ -242,64 +264,135 @@ honnête.}
 
 % =====================================================================
 \section{Régression logistique}
+\label{sec:regression}
 % =====================================================================
+
+\paragraph{Quel modèle, et pourquoi.} Notre cible \texttt{success} est
+\textbf{binaire} (sommet atteint ou non). Ce cadre exclut la régression
+linéaire (réservée à une cible continue) et rend la \textbf{régression
+logistique} naturelle~: elle modélise une probabilité entre 0 et 1. La
+variante softmax n'aurait de sens que pour plus de deux classes. La régression
+logistique offre en outre des coefficients \textbf{interprétables}, ce qui
+sert directement notre objectif de comprendre les facteurs de succès.
 
 \paragraph{Variables finales.} Après nettoyage (suppression de 2~saisons
 «~Unknown~» et de 63~expéditions sans membre), le jeu de données propre
 compte \textbf{11~362~expéditions}. Les prédicteurs sont~: \texttt{o2used},
-\texttt{comrte}, \texttt{tothired}, \texttt{totmembers}, \texttt{camps},
-\texttt{year}, \texttt{ratio\_hired}, ainsi que \texttt{season} et
-\texttt{peakid} (regroupé aux 8~sommets les plus tentés $+$ «~Autre~»)
-encodés en \textit{one-hot}.
+\texttt{comrte}, \texttt{tothired}, \texttt{totmembers}, \texttt{year},
+\texttt{ratio\_hired}, ainsi que \texttt{season} et \texttt{peakid} (regroupé
+aux 8~sommets les plus tentés $+$ «~Autre~») encodés en \textit{one-hot}.
+Nous \textbf{excluons délibérément \texttt{camps}}~: notre exploration a montré
+qu'elle contient une fuite (\textit{data leakage}). Sur l'Everest, le taux de
+succès saute de 22~\% (2~camps) à 71~\% (3~camps), car l'assaut final part du
+camp~4~: la variable mesure en réalité «~jusqu'où l'expédition est montée~»,
+information indisponible avant le départ. La conserver reviendrait à prédire
+le résultat avec une partie du résultat.
 
-\paragraph{Pipeline.} (1)~Séparation $X$ / $y$~; (2)~découpage train/test
-80/20~; (3)~\textbf{standardisation des variables numériques calée sur le
-train uniquement} (pour éviter que le test ne fuite dans la moyenne et
-l'écart-type)~; (4)~entraînement de \texttt{LogisticRegression}~;
-(5)~évaluation sur le test (accuracy, précision, rappel, matrice de
-confusion, ROC-AUC).
+\paragraph{Pipeline anti-fuite.} Tout le modèle est encapsulé dans un
+\texttt{Pipeline} combinant la \textbf{standardisation des variables
+numériques} et la \texttt{LogisticRegression}. Le point méthodologique clé est
+que la standardisation est \textbf{à l'intérieur} du pipeline~: à chaque
+entraînement, la moyenne et l'écart-type sont recalculés sur les seules
+données d'entraînement, jamais sur les données d'évaluation. On évite ainsi
+que l'information de test ne fuite dans le prétraitement (\textit{data
+leakage}).
 
-\paragraph{Le test du \textit{data leakage} sur \texttt{camps}.} Notre
-analyse a révélé que \texttt{camps} (nombre de camps installés) contient une
-fuite~: sur l'Everest, le taux de succès saute de 22~\% (2~camps) à 71~\%
-(3~camps), car l'assaut final part du camp~4. La variable mesure donc en
-partie «~jusqu'où l'expédition est montée~», ce qui est presque le résultat.
-Nous entraînons donc \textbf{deux modèles, avec et sans \texttt{camps}}, pour
-mesurer concrètement l'ampleur de cette fuite.
+\paragraph{Deux façons d'évaluer~: Holdout et validation croisée.} Nous avons
+volontairement comparé deux protocoles d'évaluation (tableau~\ref{tab:methodes}).
+Le \textbf{Holdout} réserve un seul jeu de test (20~\%)~: simple, mais son
+chiffre dépend du tirage. La \textbf{validation croisée} (5~plis,
+\texttt{StratifiedKFold}) entraîne et teste le modèle sur 5~découpages
+différents puis moyenne les scores~; elle utilise toutes les données et fournit
+un écart-type, donc une estimation plus fiable. Les deux méthodes donnent des
+résultats \textbf{cohérents} (69{,}7~\% contre 69{,}3~\%~$\pm$~1{,}1~\%)~: le
+Holdout tombe dans l'intervalle de la CV, ce qui confirme que la performance
+ne doit rien à un découpage chanceux.
 
 \begin{table}[H]
 \centering
-\caption{Performances des modèles sur le jeu de test (à compléter après
-exécution de \texttt{05\_regression.py}).}
-\begin{tabular}{lccc}
+\caption{Comparaison des méthodes d'évaluation (accuracy). La validation
+croisée et le Holdout concordent~; l'optimisation n'apporte rien de
+significatif.}
+\label{tab:methodes}
+\begin{tabular}{lc}
 \toprule
-Modèle & Accuracy & ROC-AUC & Écart au \textit{baseline} (55~\%) \\
+Méthode & Accuracy \\
 \midrule
-Baseline (classe majoritaire) & 0{,}55 & --- & --- \\
-Régression logistique (sans \texttt{camps}) & \ajuster{} & \ajuster{} & \ajuster{} \\
-Régression logistique (avec \texttt{camps}) & \ajuster{} & \ajuster{} & \ajuster{} \\
+Baseline (classe majoritaire) & 55{,}0~\% \\
+Holdout (split 80/20) & 69{,}7~\% \\
+Validation croisée (5 plis) & $\mathbf{69{,}3~\% \pm 1{,}1~\%}$ \\
+Modèle optimisé ($C=3$), test Holdout & 69{,}6~\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{Interprétation des coefficients.} \ajuster{commenter les
-coefficients une fois le modèle entraîné. Pistes attendues~: signe positif
-fort pour \texttt{o2used} et \texttt{ratio\_hired}~; les coefficients
-\texttt{peakid} s'interprètent par rapport au sommet de référence
-(AmaDablam)~; un coefficient \texttt{peakid\_EVER} positif signifierait
-«~plus de chances de succès que l'AmaDablam~», ce qui sera à confronter à
-notre intuition.} Nous vérifierons enfin l'absence de sur-apprentissage en
-comparant les performances sur le train et sur le test.
+\paragraph{Optimisation des hyperparamètres.} Nous avons cherché le meilleur
+paramètre de régularisation $C$ (qui contrôle la complexité du modèle) par
+\texttt{GridSearchCV}, avec une discipline stricte~: la recherche se fait par
+validation croisée \textbf{interne au train}, le test Holdout n'étant jamais vu
+pendant le réglage (sinon on optimiserait sur le juge final). Le meilleur
+réglage trouvé est $C=3$, mais son gain est \textbf{nul} sur le test
+($69{,}6~\%$ contre $69{,}7~\%$ pour le modèle par défaut). La leçon est
+instructive~: sur une régression logistique déjà bien posée, les paramètres par
+défaut étaient quasi optimaux, et le meilleur réglage en validation interne
+n'est pas garanti meilleur sur le test. Optimiser ne crée pas de signal qui
+n'existe pas~; pour un vrai gain, il faudrait changer de famille de modèle.
+
+\paragraph{Métriques détaillées (validation croisée).} Au-delà de l'accuracy,
+le modèle présente une \textbf{précision de 75~\%} (parmi les expéditions
+prédites «~succès~», 3 sur 4 le sont réellement), un rappel de 66~\% et un
+ROC-AUC de 0{,}747. La matrice de confusion (figure~\ref{fig:cm}), construite à
+partir des prédictions \textit{out-of-fold}, montre un modèle équilibré, sans
+biais marqué vers une classe.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\textwidth]{07_matrice_confusion.png}
+\caption{Matrice de confusion en validation croisée (5~plis). La diagonale
+concentre les bonnes prédictions.}
+\label{fig:cm}
+\end{figure}
+
+\paragraph{Interprétation des coefficients.} Les variables continues étant
+standardisées et les autres en 0/1, les coefficients sont comparables entre
+eux (figure~\ref{fig:coef}). Trois enseignements~:
+\begin{itemize}\itemsep1pt
+\item \textbf{L'oxygène domine tout} (\texttt{o2used}~: $+2{,}03$), suivi de la
+\textbf{route commerciale} (\texttt{comrte}~: $+1{,}39$). Ces deux leviers
+écrasent tous les autres et confirment l'analyse exploratoire.
+\item Les coefficients \texttt{peakid} mesurent la difficulté \emph{par rapport
+au sommet de référence}, l'AmaDablam. Les plus marqués sont négatifs, ce qui
+est logique (l'AmaDablam est l'un des plus accessibles)~: l'\textbf{Everest}
+($-1{,}97$) et le \textbf{Manaslu} ($-1{,}63$) ressortent comme les plus
+difficiles.
+\item \textbf{Notre feature \texttt{ratio\_hired} s'effondre} ($+0{,}02$,
+négligeable). Pourtant nette en analyse univariée (section~\ref{sec:features}),
+elle perd tout pouvoir une fois \texttt{o2used} et \texttt{comrte} présents~:
+ces derniers absorbent son signal (les expéditions bien encadrées sont aussi
+celles qui prennent de l'oxygène et passent par une agence). C'est un rappel
+classique~: une variable utile seule peut devenir inutile en présence d'autres.
+Nous la conservons par transparence, mais son apport réel est marginal.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.62\textwidth]{09_coefficients.png}
+\caption{Coefficients du modèle final. En vert ce qui augmente la probabilité
+de succès, en rouge ce qui la diminue. L'oxygène et la route commerciale
+dominent~; les sommets s'interprètent relativement à l'AmaDablam.}
+\label{fig:coef}
+\end{figure}
 
 % =====================================================================
 \section{Conclusion}
 % =====================================================================
 
 Notre analyse dégage une hiérarchie claire des facteurs de succès d'une
-expédition himalayenne. L'\textbf{usage de l'oxygène} domine, suivi de
-l'\textbf{encadrement} (route commerciale, proportion de Sherpas) et de la
-\textbf{difficulté intrinsèque du sommet}. Ces résultats sont cohérents avec
-le bon sens alpin, ce qui crédibilise l'approche.
+expédition himalayenne. L'\textbf{usage de l'oxygène} domine très largement,
+suivi de la \textbf{route commerciale} (encadrement logistique) et de la
+\textbf{difficulté intrinsèque du sommet}. Le modèle, validé par validation
+croisée, atteint 69{,}3~\% d'accuracy, loin devant la baseline de 55~\%. Ces
+résultats sont cohérents avec le bon sens alpin, ce qui crédibilise l'approche.
 
 Au-delà des chiffres, le projet illustre deux pièges classiques du traitement
 de données que nous avons su identifier. Le \textbf{data leakage}~: certaines

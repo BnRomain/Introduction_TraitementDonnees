@@ -14,9 +14,6 @@
 # =============================================================
 
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 # ----- Chargement du dataset brut (65 colonnes) -----
 df_brut = pd.read_csv("DataBase/exped.csv", low_memory=False)
