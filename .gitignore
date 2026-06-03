@@ -9,3 +9,7 @@ __pycache__/
 .DS_Store
 Thumbs.db
 .claude/
+
+# Soutenance : on versionne le .pptx, pas le script oral ni le generateur
+presentation/script_oral.md
+presentation/make_pptx.py
