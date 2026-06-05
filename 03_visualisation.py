@@ -137,54 +137,47 @@ plt.close(fig)
 
 
 # =============================================================
-# FIGURE 5 - Multidimensionnel EN COURBES : evolution du taux de succes
-# Pour passer de la moyenne globale (fig 1) a une vue dynamique, on met le
-# TEMPS en abscisse (annee) et on superpose plusieurs courbes. On se limite a
-# 1990+ (donnees denses, ~270 expeditions/an) et on lisse par moyenne glissante
-# pour gommer le bruit annuel. Trois dimensions par panneau : annee (x), taux
-# de succes (y), categorie (chaque courbe).
-#   (gauche) avec O2 vs sans O2  -> l'avantage de l'oxygene est-il stable ?
-#   (droite) 4 sommets emblematiques -> leur difficulte relative dans le temps.
+# FIGURE 5 - Multidimensionnel EN COURBES : oxygene x sommet x succes
+# On croise les TROIS dimensions demandees dans un seul graphe. En abscisse,
+# les grands sommets classes par difficulte croissante (= taux de succes sans
+# O2, du plus accessible au plus dur). Deux courbes : avec O2 / sans O2.
+# LECTURE : la courbe "avec O2" reste haute et plate -> a l'oxygene, le sommet
+# importe peu. La courbe "sans O2" s'effondre -> sans oxygene, la difficulte du
+# sommet devient decisive. L'ECART entre les courbes (la valeur de l'oxygene)
+# se creuse avec la difficulte. On ne garde que les sommets ou CHAQUE groupe
+# (avec / sans O2) compte au moins 30 expeditions, pour des taux fiables.
 # =============================================================
-dfp = df[df["year"] >= 1990].copy()
-annees = range(int(dfp["year"].min()), int(dfp["year"].max()) + 1)
+noms = {"EVER": "Everest", "KANG": "Kangchenjunga", "LHOT": "Lhotse",
+        "MAKA": "Makalu", "CHOY": "Cho Oyu", "DHA1": "Dhaulagiri",
+        "MANA": "Manaslu", "ANN1": "Annapurna"}
 
+lignes = []
+for pk in noms:
+    d = df[df["peakid"] == pk]
+    sans = d[~d["o2used"]]
+    avec = d[d["o2used"]]
+    if len(sans) >= 30 and len(avec) >= 30:
+        lignes.append((pk, sans["success"].mean(), avec["success"].mean()))
 
-def courbe_taux(d, lissage):
-    """Taux de succes par annee, lisse par moyenne glissante centree."""
-    s = d.groupby("year")["success"].mean().reindex(annees)
-    return s.rolling(lissage, center=True, min_periods=2).mean()
+lignes.sort(key=lambda t: t[1], reverse=True)   # du plus facile au plus dur (sans O2)
+labels = [noms[pk] for pk, _, _ in lignes]
+y_sans = [s for _, s, _ in lignes]
+y_avec = [a for _, _, a in lignes]
+x = np.arange(len(labels))
 
-
-fig, (axg, axd) = plt.subplots(1, 2, figsize=(12, 4.6))
-
-# --- gauche : effet de l'oxygene au fil du temps (2 courbes) ---
-for val, lib, col in [(False, "Sans oxygene", "#c0392b"),
-                      (True, "Avec oxygene", "#27ae60")]:
-    s = courbe_taux(dfp[dfp["o2used"] == val], lissage=3)
-    axg.plot(s.index, s.values, label=lib, color=col, lw=2.4)
-axg.set_ylim(0, 1)
-axg.set_xlabel("Annee")
-axg.set_ylabel("Taux de succes")
-axg.set_title("L'avantage de l'oxygene, stable dans le temps")
-axg.legend()
-
-# --- droite : difficulte des sommets au fil du temps (4 courbes) ---
-sommets = [("EVER", "Everest", "#c0392b"), ("AMAD", "Ama Dablam", "#27ae60"),
-           ("CHOY", "Cho Oyu", "#2980b9"), ("MANA", "Manaslu", "#e67e22")]
-for pk, lib, col in sommets:
-    s = courbe_taux(dfp[dfp["peakid"] == pk], lissage=5)
-    axd.plot(s.index, s.values, label=lib, color=col, lw=2.4)
-axd.set_ylim(0, 1)
-axd.set_xlabel("Annee")
-axd.set_ylabel("Taux de succes")
-axd.set_title("Difficulte des sommets au fil du temps")
-axd.legend()
-
-fig.suptitle("Evolution du taux de succes (moyenne glissante, depuis 1990)",
-             fontsize=13, fontweight="bold")
+fig, ax = plt.subplots(figsize=(9.5, 5))
+ax.fill_between(x, y_sans, y_avec, color="#27ae60", alpha=0.10)  # ecart = valeur de l'O2
+ax.plot(x, y_avec, "-o", color="#27ae60", lw=2.6, ms=7, label="Avec oxygene")
+ax.plot(x, y_sans, "-o", color="#c0392b", lw=2.6, ms=7, label="Sans oxygene")
+ax.set_xticks(x)
+ax.set_xticklabels(labels, rotation=30, ha="right")
+ax.set_ylim(0, 1)
+ax.set_ylabel("Taux de succes")
+ax.set_xlabel("Sommets classes du plus accessible au plus difficile (sans oxygene)")
+ax.set_title("Sans oxygene, le sommet fait tout ; avec oxygene, l'ecart s'efface")
+ax.legend()
 fig.tight_layout()
-fig.savefig("figures/08_evolution_succes.png", dpi=150)
+fig.savefig("figures/08_oxygene_par_sommet.png", dpi=150)
 plt.close(fig)
 
 
@@ -193,4 +186,4 @@ print("  01_effet_oxygene.png")
 print("  02_interaction_o2_saison.png")
 print("  03_sherpas_vs_membres.png")
 print("  04_correlations.png")
-print("  08_evolution_succes.png")
+print("  08_oxygene_par_sommet.png")
