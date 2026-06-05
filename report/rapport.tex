@@ -8,11 +8,17 @@
 \usepackage{booktabs}
 \usepackage{float}
 \usepackage{caption}
+\usepackage{xcolor}
 \usepackage[hidelinks]{hyperref}
 
 % Cherche les figures dans plusieurs emplacements (local report/, ou Overleaf)
 \graphicspath{{../figures/}{figures/}{./}}
 \captionsetup{font=small,labelfont=bf}
+
+% Citations numerotees cliquables : \refcite{ref:xxx} -> [n] en exposant,
+% lien vers l'item correspondant de la section References.
+\definecolor{refblue}{RGB}{30,90,150}
+\newcommand{\refcite}[1]{\textsuperscript{\textcolor{refblue}{[\ref{#1}]}}}
 
 \title{\vspace{-1.5cm}\textbf{Peut-on prédire le succès d'une expédition himalayenne~?}\\[0.3cm]
 \large Introduction au Traitement des Données --- Projet Kaggle}
@@ -43,8 +49,9 @@ de \textbf{classification binaire} (succès / échec), que nous traitons par
 \textbf{régression logistique}.
 
 \paragraph{Le jeu de données.} Nous utilisons le jeu de données
-\textit{Himalayan Expeditions} (Kaggle), issu de la base historique
-d'Elizabeth Hawley. Il recense \textbf{11~425 expéditions} décrites par
+\textit{Himalayan Expeditions} (Kaggle)\refcite{ref:data}, issu de la base
+historique d'Elizabeth Hawley\refcite{ref:hawley}. Il recense
+\textbf{11~425 expéditions} décrites par
 65~variables. La cible \texttt{success} est presque équilibrée~:
 \textbf{55~\% de succès} contre 45~\% d'échec. Cet équilibre est précieux~:
 la régression logistique pourra être entraînée sans rééquilibrage, et
@@ -62,7 +69,7 @@ résultat~». Nous les avons donc systématiquement écartées des prédicteurs~
 
 \paragraph{Point de départ assumé.} Le règlement autorise à s'appuyer sur les
 contributions publiées. Nous partons donc de la vingtaine de variables
-retenues par Muhammed Ali Yilmaz dans son notebook Kaggle, plutôt que des
+retenues par Muhammed Ali Yilmaz dans son notebook Kaggle\refcite{ref:notebook}, plutôt que des
 65~colonnes brutes. Notre travail de nettoyage et de sélection s'effectue sur
 cette base déjà dégrossie, ce qui nous permet de concentrer l'effort sur
 l'analyse plutôt que sur le tri initial.
@@ -77,7 +84,7 @@ Le projet a été mené en binôme par Romain Ben et Loriziano Soave.
 matplotlib, seaborn, scikit-learn), organisés en scripts \texttt{.py}
 numérotés correspondant aux étapes du pipeline (exploration, wrangling,
 visualisation, feature engineering, régression). Le code et les données sont
-versionnés sur \textbf{GitHub}~: \url{https://github.com/BnRomain/Introduction_TraitementDonnees}.
+versionnés sur \textbf{GitHub}\refcite{ref:repo}~: \url{https://github.com/BnRomain/Introduction_TraitementDonnees}.
 
 \paragraph{Ressources et assistance.} Le projet s'appuie sur \textbf{Kaggle},
 à la fois comme source du jeu de données et comme base de travail (le notebook
@@ -357,7 +364,8 @@ le résultat avec une partie du résultat.
 
 \paragraph{Pipeline anti-fuite.} Tout le modèle est encapsulé dans un
 \texttt{Pipeline} combinant la \textbf{standardisation des variables
-numériques} et la \texttt{LogisticRegression}. Le point méthodologique clé est
+numériques} et la \texttt{LogisticRegression}\refcite{ref:sklearn}. Le point
+méthodologique clé est
 que la standardisation est \textbf{à l'intérieur} du pipeline~: à chaque
 entraînement, la moyenne et l'écart-type sont recalculés sur les seules
 données d'entraînement, jamais sur les données d'évaluation. On évite ainsi
@@ -482,14 +490,15 @@ si des interactions plus fines existent, tout en restant vigilant sur le
 % =====================================================================
 
 \begin{enumerate}\itemsep0pt
-\item Jeu de données~: \textit{Himalayan Expeditions}, Kaggle.
+\item\label{ref:data} Jeu de données~: \textit{Himalayan Expeditions}, Kaggle.
 \url{https://www.kaggle.com/datasets/siddharth0935/himalayan-expeditions}
-\item Notebook d'inspiration~: M.~A.~Yilmaz, \textit{Himalayan Climb
-Prediction with ML/DL}, Kaggle.
+\item\label{ref:notebook} Notebook d'inspiration~: M.~A.~Yilmaz,
+\textit{Himalayan Climb Prediction with ML/DL}, Kaggle.
 \url{https://www.kaggle.com/code/muhammedaliyilmazz/himalayan-climb-prediction-with-ml-dl}
-\item Source historique~: The Himalayan Database (E.~Hawley).
-\item \textit{scikit-learn}~: documentation de \texttt{LogisticRegression}.
-\item Dépôt du projet~:
+\item\label{ref:hawley} Source historique~: The Himalayan Database (E.~Hawley).
+\item\label{ref:sklearn} \textit{scikit-learn}~: documentation de
+\texttt{LogisticRegression}.
+\item\label{ref:repo} Dépôt du projet~:
 \url{https://github.com/BnRomain/Introduction_TraitementDonnees}
 \end{enumerate}
 

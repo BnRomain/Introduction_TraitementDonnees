@@ -10,5 +10,6 @@ __pycache__/
 Thumbs.db
 .claude/
 
-# Soutenance : on versionne le .pptx et le script oral, pas le generateur
+# Soutenance : on versionne le .pptx et le script oral .md, pas les fichiers locaux
 presentation/make_pptx.py
+presentation/script_oral.docx
