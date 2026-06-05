@@ -219,26 +219,28 @@ C'est le signal le plus fort du jeu de données.}
 \label{fig:o2}
 \end{figure}
 
-\paragraph{Approfondir~: croiser l'oxygène et le sommet (vue
-multidimensionnelle).} Ce passage de 45~\% à 80~\% est une \emph{moyenne}, et
-une moyenne peut masquer de fortes disparités. Nous croisons donc \textbf{trois
-dimensions sur un seul graphe} (figure~\ref{fig:o2peak})~: le sommet tenté
-(lignes), l'usage d'oxygène (colonnes) et le taux de succès (couleur), en
-indiquant l'effectif de chaque case. La lecture est frappante~: sur
-l'\textbf{Everest}, l'oxygène fait basculer le succès de \textbf{6~\% à 81~\%},
-alors que sur l'\textbf{Ama Dablam}, sommet bien plus accessible, il ne change
-quasiment rien (71~\% contre 72~\%) et n'est d'ailleurs presque jamais emporté.
-\textbf{L'effet de l'oxygène dépend donc du sommet tenté}, ce que la moyenne
-globale seule ne pouvait pas révéler.
+\paragraph{Une lecture dynamique~: l'évolution dans le temps (courbes
+multidimensionnelles).} Le chiffre global n'est qu'une photographie. Pour saisir
+la \emph{dynamique}, nous mettons le \textbf{temps en abscisse} et superposons
+plusieurs courbes (figure~\ref{fig:evolution}, depuis 1990 où les données sont
+denses, lissées par moyenne glissante pour gommer le bruit annuel). Chaque
+panneau croise ainsi \textbf{trois dimensions}~: l'année, le taux de succès, et
+une catégorie par courbe. À \textbf{gauche}, le taux \textbf{avec} et
+\textbf{sans} oxygène~: l'écart d'environ 30~points est \textbf{remarquablement
+stable} sur trente ans, l'oxygène n'est pas un effet de mode. À \textbf{droite},
+quatre sommets emblématiques~: on y lit leur \textbf{difficulté relative}
+(l'Ama Dablam, plus accessible, reste longtemps au-dessus de l'Everest) ainsi
+qu'une \textbf{tendance commune à la hausse} récente, signe de la
+professionnalisation des expéditions.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.58\textwidth]{08_oxygene_par_sommet.png}
-\caption{Taux de succès selon le sommet (lignes) et l'usage d'oxygène
-(colonnes), avec l'effectif de chaque groupe. Lignes triées par effet de
-l'oxygène décroissant. La colonne «~sans oxygène~» est rouge pour l'Everest
-mais verte pour l'Ama Dablam~: une moyenne unique aurait gommé ce contraste.}
-\label{fig:o2peak}
+\includegraphics[width=\textwidth]{08_evolution_succes.png}
+\caption{Évolution du taux de succès depuis 1990 (moyenne glissante).
+\textbf{Gauche}~: selon l'usage d'oxygène. \textbf{Droite}~: pour quatre sommets
+emblématiques. Chaque panneau superpose plusieurs courbes pour croiser trois
+dimensions (année, taux de succès, catégorie).}
+\label{fig:evolution}
 \end{figure}
 
 \paragraph{Outil 2~: la matrice de corrélation.} La heatmap
