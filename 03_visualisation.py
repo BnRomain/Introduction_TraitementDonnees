@@ -136,8 +136,52 @@ fig.savefig("figures/04_correlations.png", dpi=150)
 plt.close(fig)
 
 
-print("4 figures generees dans figures/ :")
+# =============================================================
+# FIGURE 5 - Multidimensionnel : taux de succes selon (sommet x oxygene)
+# COMMENT on l'a trouve : la figure 1 montre que l'O2 double les chances EN
+# MOYENNE. Mais une moyenne peut cacher de fortes disparites. On croise les
+# DEUX variables categorielles les plus fortes (peakid x o2used) et on colore
+# par le taux de succes : trois dimensions sur un seul graphe.
+# LECTURE : sur l'Everest l'oxygene fait basculer le succes de 6% a 81% ; sur
+# l'AmaDablam (sommet plus accessible) il ne change quasi rien (71 -> 72%) et
+# presque personne ne l'emporte. L'effet de l'oxygene DEPEND donc du sommet.
+# Lignes triees par effet de l'O2 (ecart "avec" - "sans") decroissant.
+# =============================================================
+noms = {"EVER": "Everest", "AMAD": "Ama Dablam", "CHOY": "Cho Oyu",
+        "MANA": "Manaslu", "LHOT": "Lhotse", "DHA1": "Dhaulagiri I",
+        "MAKA": "Makalu", "BARU": "Baruntse"}
+top8 = df["peakid"].value_counts().head(8).index
+sub = df[df["peakid"].isin(top8)]
+taux = sub.pivot_table("success", "peakid", "o2used", aggfunc="mean")
+eff = sub.pivot_table("success", "peakid", "o2used", aggfunc="size")
+taux = taux.rename(columns={False: "Sans oxygene", True: "Avec oxygene"})
+eff = eff.rename(columns={False: "Sans oxygene", True: "Avec oxygene"})
+ordre = (taux["Avec oxygene"] - taux["Sans oxygene"]).sort_values(ascending=False).index
+taux = taux.loc[ordre]
+eff = eff.loc[ordre]
+taux.index = [noms.get(c, c) for c in taux.index]
+
+# annotation riche : taux% + effectif (la 4e information du graphe)
+annot = taux.copy().astype(object)
+for i in range(taux.shape[0]):
+    for j in range(taux.shape[1]):
+        annot.iloc[i, j] = f"{taux.iloc[i, j]*100:.0f}%\n(n={int(eff.iloc[i, j])})"
+
+fig, ax = plt.subplots(figsize=(6.5, 5.5))
+sns.heatmap(taux, annot=annot, fmt="", cmap="RdYlGn", center=0.5,
+            vmin=0, vmax=1, linewidths=1, ax=ax,
+            cbar_kws={"label": "Taux de succes"})
+ax.set_xlabel("")
+ax.set_ylabel("Sommet (8 plus tentes)")
+ax.set_title("L'effet de l'oxygene depend du sommet tente")
+fig.tight_layout()
+fig.savefig("figures/08_oxygene_par_sommet.png", dpi=150)
+plt.close(fig)
+
+
+print("5 figures generees dans figures/ :")
 print("  01_effet_oxygene.png")
 print("  02_interaction_o2_saison.png")
 print("  03_sherpas_vs_membres.png")
 print("  04_correlations.png")
+print("  08_oxygene_par_sommet.png")

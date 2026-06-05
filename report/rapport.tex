@@ -201,8 +201,8 @@ où elle est recalculée à chaque entraînement.
 % =====================================================================
 
 Avant de modéliser, nous cherchons à \textbf{comprendre les relations} entre
-les variables et le succès. Notre méthode repose sur deux outils
-complémentaires.
+les variables et le succès. Notre méthode combine plusieurs angles
+complémentaires, du signal le plus simple à la vue multidimensionnelle.
 
 \paragraph{Outil 1~: le croisement variable~/ cible.} En groupant les
 expéditions par une variable et en calculant le taux de succès moyen
@@ -217,6 +217,28 @@ selon que l'expédition utilise ou non de l'oxygène en bouteille.
 \caption{L'oxygène supplémentaire double presque les chances de succès.
 C'est le signal le plus fort du jeu de données.}
 \label{fig:o2}
+\end{figure}
+
+\paragraph{Approfondir~: croiser l'oxygène et le sommet (vue
+multidimensionnelle).} Ce passage de 45~\% à 80~\% est une \emph{moyenne}, et
+une moyenne peut masquer de fortes disparités. Nous croisons donc \textbf{trois
+dimensions sur un seul graphe} (figure~\ref{fig:o2peak})~: le sommet tenté
+(lignes), l'usage d'oxygène (colonnes) et le taux de succès (couleur), en
+indiquant l'effectif de chaque case. La lecture est frappante~: sur
+l'\textbf{Everest}, l'oxygène fait basculer le succès de \textbf{6~\% à 81~\%},
+alors que sur l'\textbf{Ama Dablam}, sommet bien plus accessible, il ne change
+quasiment rien (71~\% contre 72~\%) et n'est d'ailleurs presque jamais emporté.
+\textbf{L'effet de l'oxygène dépend donc du sommet tenté}, ce que la moyenne
+globale seule ne pouvait pas révéler.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.58\textwidth]{08_oxygene_par_sommet.png}
+\caption{Taux de succès selon le sommet (lignes) et l'usage d'oxygène
+(colonnes), avec l'effectif de chaque groupe. Lignes triées par effet de
+l'oxygène décroissant. La colonne «~sans oxygène~» est rouge pour l'Everest
+mais verte pour l'Ama Dablam~: une moyenne unique aurait gommé ce contraste.}
+\label{fig:o2peak}
 \end{figure}
 
 \paragraph{Outil 2~: la matrice de corrélation.} La heatmap
